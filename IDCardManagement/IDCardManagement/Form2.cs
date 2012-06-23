@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -179,9 +180,10 @@ namespace IDCardManagement
                 }
 
         }
-
+        //save
         private void toolStripButton4_Click(object sender, EventArgs e)
         {
+
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
                 using (XmlWriter wrt = XmlWriter.Create(saveFileDialog1.FileName))
                 {
@@ -215,8 +217,8 @@ namespace IDCardManagement
                     wrt.WriteAttributeString("connectionString", idcard.connectionString);
                     wrt.WriteAttributeString("height", idcard.dimensions.Height.ToString());
                     wrt.WriteAttributeString("width", idcard.dimensions.Width.ToString());
-                    wrt.WriteAttributeString("tableName",idcard.tableName);
-                    wrt.WriteAttributeString("title",label1.Text);//idcard.title
+                    wrt.WriteAttributeString("tableName", idcard.tableName);
+                    wrt.WriteAttributeString("title", label1.Text);//idcard.title
                     string imagebase64String;
                     using (MemoryStream ms = new MemoryStream())
                     {
@@ -224,13 +226,13 @@ namespace IDCardManagement
                         byte[] imageBytes = ms.ToArray();
                         imagebase64String = Convert.ToBase64String(imageBytes);
                     }
-                    //wrt.WriteAttributeString("backgroundImage", imagebase64String);
+                    wrt.WriteAttributeString("backgroundImage", imagebase64String);
                     foreach (string str in idcard.fields)
                     {
 
-                        wrt.WriteElementString("field",str);
+                        wrt.WriteElementString("field", str);
 
- 
+
                     }
                     foreach (string str in idcard.selectedFields)
                     {
@@ -243,6 +245,98 @@ namespace IDCardManagement
                     wrt.WriteEndElement();//panel
                     wrt.WriteEndDocument();
                 }
+
+        }
+
+        //open
+        private void toolStripButton5_Click(object sender, EventArgs e)
+        {
+            ArrayList fields = new ArrayList();
+            ArrayList selectedFields = new ArrayList();
+            Image backgroundImage= idcard.backgroundImage;
+            string connectionString="", tableName="",title="";
+            Size dimensions=new Size();
+
+
+
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                using (XmlTextReader reader = new XmlTextReader(openFileDialog1.FileName))
+                    while (reader.Read())
+                    {
+                        switch (reader.NodeType)
+                        {
+                            case XmlNodeType.Element:
+                                switch (reader.Name)
+                                {
+                                    case "label":
+                                        Label tmp = new Label();
+                                        tmp.Text = reader.GetAttribute("text");
+                                        tmp.Top = Convert.ToInt32(reader.GetAttribute("top"));
+                                        tmp.Left = Convert.ToInt32(reader.GetAttribute("left"));
+                                        this.panel1.Controls.Add(tmp);
+                                        tmp.AutoSize = true;
+                                        tmp.Font = (Font)TypeDescriptor.GetConverter(typeof(Font)).ConvertFromString(reader.GetAttribute("font"));
+                                        tmp.BackColor = Color.FromArgb(Convert.ToInt32(reader.GetAttribute("backcolor")));
+                                        tmp.ForeColor = Color.FromArgb(Convert.ToInt32(reader.GetAttribute("forecolor")));
+                                        break;
+                                    case "pictureBox":
+                                        PictureBox tmpPic = new PictureBox();
+                                        tmpPic.Left = Convert.ToInt32(reader.GetAttribute("left"));
+                                        tmpPic.Top = Convert.ToInt32(reader.GetAttribute("top"));
+                                        break;
+                                    case "field":
+                                        fields.Add(reader.Value);
+                                        break;
+                                    case "selectedFields":
+                                        selectedFields.Add(reader.Value);
+                                        break;
+
+
+                                    case "idCard":
+                                        dimensions.Height = Convert.ToInt32(reader.GetAttribute("height"));
+                                        dimensions.Width = Convert.ToInt32(reader.GetAttribute("width"));
+                                        String base64String;
+                                        if ((base64String = reader.GetAttribute("backgroundImage")) != null)
+                                        {
+                                            // Console.WriteLine(base64String);
+                                            byte[] imageBytes = Convert.FromBase64String(base64String);
+                                            MemoryStream ms = new MemoryStream(imageBytes, 0, imageBytes.Length);
+                                            // Convert byte[] to Image
+                                            ms.Write(imageBytes, 0, imageBytes.Length);
+                                            //Image image = 
+                                            backgroundImage = Image.FromStream(ms, true);
+                                            Console.WriteLine("done");
+                                        }
+                                        title = reader.GetAttribute("title");
+                                        tableName = reader.GetAttribute ("tableName");
+
+                                        break;
+
+
+
+                                }
+                                break;
+                            case XmlNodeType.Text: //Display the text in each element.
+                                //Console.WriteLine(reader.Value);
+                                break;
+                            case XmlNodeType.EndElement: //Display the end of the element.
+                                //Console.Write("</" + reader.Name);
+                                //Console.WriteLine(">");
+                                break;
+                        }
+                    }                        
+            idcard = new IDCard(connectionString, tableName, dimensions, backgroundImage, fields, selectedFields, title);
+
+            Form2_Load(null, null);
+        }
+
+        private void toolStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+
+        }
+
+        private void openFileDialog1_FileOk(object sender, CancelEventArgs e)
+        {
 
         }
 
